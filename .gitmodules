@@ -1,0 +1,3 @@
+[submodule "src/b2c_core"]
+	path = src/b2c_core
+	url = git@github.com:Brojowski/b2c_core.git
