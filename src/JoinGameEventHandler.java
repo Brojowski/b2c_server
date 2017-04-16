@@ -56,6 +56,10 @@ public class JoinGameEventHandler implements DataListener<String>
     public void onData(SocketIOClient socketIOClient, String s, AckRequest ackRequest)
     {
         System.out.println("Event: join");
-        joinGame(Server.getUser(socketIOClient));
+        User user = Server.getUser(socketIOClient);
+        if (GameManager.GetUsersGame(user) == null)
+        {
+            joinGame(user);
+        }
     }
 }
