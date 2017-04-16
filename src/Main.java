@@ -5,9 +5,6 @@ import java.awt.*;
 
 public class Main
 {
-    public static final String JOIN_GAME = "join";
-
-
     public static void main(String[] args)
     {
         Server.StartServer();

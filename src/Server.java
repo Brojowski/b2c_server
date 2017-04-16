@@ -4,7 +4,8 @@ import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.corundumstudio.socketio.listener.ConnectListener;
 import com.corundumstudio.socketio.listener.DisconnectListener;
-import com.eclipsesource.json.JsonArray;
+import com.example.b2c_core.Routes;
+import com.example.b2c_core.User;
 
 import java.util.HashMap;
 
@@ -13,9 +14,10 @@ import java.util.HashMap;
  */
 public class Server
 {
-    private final HashMap<User, SocketIOClient> _users = new HashMap<>();
+    private final HashMap<SocketIOClient, User> _users = new HashMap<>();
+    private final HashMap<User, SocketIOClient> _clients = new HashMap<>();
     private static Server INSTANCE;
-    SocketIOServer _server;
+    private SocketIOServer _server;
 
     private Server()
     {
@@ -28,14 +30,9 @@ public class Server
 
         _server.addConnectListener(new ConnectionListener());
 
-        _server.addEventListener(Main.JOIN_GAME, String.class, new JoinGameEventHandler());
+        _server.addEventListener(Routes.ToServer.JOIN_GAME, String.class, new JoinGameEventHandler());
 
         _server.start();
-    }
-
-    public void stop()
-    {
-        _server.stop();
     }
 
     public static void StartServer()
@@ -48,10 +45,18 @@ public class Server
 
     public static void StopServer()
     {
-        if (INSTANCE != null)
-        {
-            INSTANCE.stop();
-        }
+        INSTANCE._server.stop();
+    }
+
+
+    public static User getUser(SocketIOClient client)
+    {
+        return INSTANCE._users.get(client);
+    }
+
+    public static void emitToUser(User user, String event, Object... objects)
+    {
+        INSTANCE._clients.get(user).sendEvent(event, objects);
     }
 
     private class ConnectionListener implements ConnectListener, DisconnectListener
@@ -61,15 +66,19 @@ public class Server
         public void onConnect(SocketIOClient socketIOClient)
         {
             System.out.println("Connection " + socketIOClient.toString());
-            _users.put(User.exampleUser(), socketIOClient);
+            User u = User.exampleUser();
+            _users.put(socketIOClient, u);
+            _clients.put(u, socketIOClient);
         }
 
         @Override
         public void onDisconnect(SocketIOClient socketIOClient)
         {
             System.out.println("Disconnect " + socketIOClient);
-            _users.remove(socketIOClient);
-            if (_users.containsValue(socketIOClient))
+            User socketUser = _users.get(socketIOClient);
+            // Using | instead of || because we don't want short circuiting
+            if (_users.remove(socketIOClient) == null
+                    | _clients.remove(socketUser) == null)
             {
                 System.out.println("Error Removing");
             }
