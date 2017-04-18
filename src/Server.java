@@ -4,8 +4,10 @@ import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.corundumstudio.socketio.listener.ConnectListener;
 import com.corundumstudio.socketio.listener.DisconnectListener;
+import com.example.b2c_core.PostDraftTransferObject;
 import com.example.b2c_core.Routes;
 import com.example.b2c_core.User;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
 
@@ -31,6 +33,7 @@ public class Server
         _server.addConnectListener(new ConnectionListener());
 
         _server.addEventListener(Routes.ToServer.JOIN_GAME, String.class, new JoinGameEventHandler());
+        _server.addEventListener(Routes.ToServer.DRAFT_COMPLETE, String.class, new DraftCompleteListener());
 
         _server.start();
     }

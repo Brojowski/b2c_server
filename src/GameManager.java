@@ -44,6 +44,14 @@ public class GameManager
         }
     }
 
+    public void finishDraft(User player, PostDraftTransferObject draftResults)
+    {
+        System.out.println(player);
+        System.out.println(draftResults);
+
+        // Verify chosen tiles are allowed.
+    }
+
     @Override
     public String toString()
     {

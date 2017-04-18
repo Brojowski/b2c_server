@@ -57,10 +57,10 @@ public class JoinGameEventHandler implements DataListener<String>
     @Override
     public void onData(SocketIOClient socketIOClient, String s, AckRequest ackRequest)
     {
-        System.out.println("Event: join");
         User user = Server.getUser(socketIOClient);
         if (GameManager.GetUsersGame(user) == null)
         {
+            System.out.println("Event: join");
             joinGame(user);
         }
     }
