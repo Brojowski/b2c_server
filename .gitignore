@@ -2,4 +2,4 @@ out/
 b2c_server.iml
 .idea/
 src/com/example/b2c_core/
-ServerTests/src/ServerTests.iml
+ServerTests/ServerTests.iml

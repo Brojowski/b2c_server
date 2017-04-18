@@ -1,4 +1,4 @@
-import com.example.b2c_core.User;
+import com.example.b2c_core.*;
 
 import java.util.HashMap;
 
@@ -7,35 +7,64 @@ import java.util.HashMap;
  */
 public class GameManager
 {
-    private User player1, player2, player3;
+    private int _numPlayers;
 
-    private GameManager(User p1, User p2, User p3)
+    private User[] _players;
+    private DraftTileManager _tileManager;
+    /**
+     * cities[0] shared by _players[0] && [1]
+     * cities[1] shared by _players[1] && [2]
+     * cities[2] shared by _players[0] && [2]
+     */
+    private City[] _cities;
+    private BuildingType[][] _lastDraftSet;
+
+
+    private GameManager(User... players)
     {
-        player1 = p1;
-        player2 = p2;
-        player3 = p3;
+        _tileManager = new DraftTileManager();
+        _players = players;
+        _numPlayers = players.length;
+        _lastDraftSet = new BuildingType[_numPlayers][];
+        _cities = new City[_numPlayers];
+        for (int i = 0; i < _numPlayers; i++)
+        {
+            _cities[i] = new City();
+        }
+        startDraft();
+    }
+
+    private void startDraft()
+    {
+        for (int i = 0; i < _numPlayers; i++)
+        {
+            _lastDraftSet[i] = _tileManager.draft7();
+            DraftTransferObject dto = DraftTransferObject.create(_lastDraftSet[i], _cities);
+            Server.emitToUser(_players[i], Routes.FromServer.BEGIN_DRAFT, dto);
+        }
     }
 
     @Override
     public String toString()
     {
-        return "Players" +
-                System.getProperty("line.separator") +
-                player1 +
-                System.getProperty("line.separator") +
-                player2 +
-                System.getProperty("line.separator") +
-                player3;
+        StringBuilder out = new StringBuilder("Players:\n");
+        for (User u : _players)
+        {
+            out.append(u.getUsername());
+            out.append("\n");
+        }
+        return out.toString();
     }
 
     private static final HashMap<User, GameManager> CURRENT_GAMES = new HashMap<>();
 
-    public static GameManager StartNewGame(User u1, User u2, User u3)
+    public static GameManager StartNewGame(User... users)
     {
-        GameManager createdGame = new GameManager(u1, u2, u3);
-        CURRENT_GAMES.put(u1, createdGame);
-        CURRENT_GAMES.put(u2, createdGame);
-        CURRENT_GAMES.put(u3, createdGame);
+        GameManager createdGame = new GameManager(users);
+        for (User u : users)
+        {
+            CURRENT_GAMES.put(u, createdGame);
+        }
         return createdGame;
     }
 

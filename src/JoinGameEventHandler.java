@@ -11,7 +11,7 @@ import java.util.LinkedHashSet;
  */
 public class JoinGameEventHandler implements DataListener<String>
 {
-
+    private static final int NUM_PLAYERS = 2;
     private LinkedHashSet<User> _joinQueue;
     private int _waitingPlayers;
 
@@ -27,7 +27,7 @@ public class JoinGameEventHandler implements DataListener<String>
         {
             _waitingPlayers++;
         }
-        if (_waitingPlayers >= 3)
+        if (_waitingPlayers >= NUM_PLAYERS)
         {
             startGame();
         }
@@ -35,10 +35,12 @@ public class JoinGameEventHandler implements DataListener<String>
 
     private void startGame()
     {
-        User u1 = pop();
-        User u2 = pop();
-        User u3 = pop();
-        GameManager game = GameManager.StartNewGame(u1, u2, u3);
+        User[] players = new User[NUM_PLAYERS];
+        for (int i = 0; i < NUM_PLAYERS; i++)
+        {
+            players[i] = pop();
+        }
+        GameManager game = GameManager.StartNewGame(players);
         System.out.println(game.toString());
     }
 
