@@ -1,6 +1,6 @@
 import com.example.b2c_core.*;
 
-import java.util.HashMap;
+import java.util.*;
 
 /**
  * Created by alex on 4/12/17.
@@ -18,6 +18,8 @@ public class GameManager
      */
     private City[] _cities;
     private BuildingType[][] _lastDraftSet;
+    private Map<User, BuildingType[]> _sectionComplete;
+    private boolean _draftInProgress;
 
 
     private GameManager(User... players)
@@ -31,11 +33,17 @@ public class GameManager
         {
             _cities[i] = new City();
         }
+        _sectionComplete = new HashMap<>();
+        for (User u : players)
+        {
+            _sectionComplete.put(u, null);
+        }
         startDraft();
     }
 
     private void startDraft()
     {
+        _draftInProgress = true;
         for (int i = 0; i < _numPlayers; i++)
         {
             _lastDraftSet[i] = _tileManager.draft7();
@@ -46,11 +54,43 @@ public class GameManager
 
     public void finishDraft(User player, PostDraftTransferObject draftResults)
     {
-        System.out.println(player);
-        System.out.println(draftResults);
+        // Ignore if not drafting.
+        if (!_draftInProgress)
+        {
+            return;
+        }
 
-        // Verify chosen tiles are allowed.
+        // Find the user index for references.
+        int playerIndex = 0;
+        while (_players[playerIndex] != player) playerIndex++;
+
+        // Check that all tiles chosen were options.
+        LinkedList<BuildingType> tiles = new LinkedList<>(Arrays.asList(_lastDraftSet[playerIndex]));
+        for (BuildingType tile : draftResults.getSelectedTiles())
+        {
+            if (!tiles.remove(tile))
+            {
+                System.out.println("No tile found: " + tile);
+            }
+        }
+
+        _sectionComplete.replace(_players[playerIndex], draftResults.getSelectedTiles());
+        for (int i = 0; i < _numPlayers; i++)
+        {
+            if (_sectionComplete.get(_players[i]) == null)
+            {
+                return;
+            }
+        }
+
+        // All the users have chosen their tiles.
+        _draftInProgress = false;
+        System.out.println("Place tiles");
     }
+
+
+
+
 
     @Override
     public String toString()
