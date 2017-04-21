@@ -86,9 +86,18 @@ public class GameManager
         // All the users have chosen their tiles.
         _draftInProgress = false;
         System.out.println("Place tiles");
+        startPlacingTiles();
     }
 
-
+    private void startPlacingTiles()
+    {
+        for (int i = 0; i < _numPlayers; i++)
+        {
+            BuildingType[] tilesToPlace = _sectionComplete.get(_players[i]);
+            PlaceTransferObject placeTransfer = PlaceTransferObject.create(tilesToPlace, null, _cities, _cities);
+            Server.emitToUser(_players[i], Routes.FromServer.BEGIN_PLACE, placeTransfer);
+        }
+    }
 
 
 

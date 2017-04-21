@@ -26,6 +26,7 @@ public class JoinGameEventHandler implements DataListener<String>
         if (_joinQueue.add(user))
         {
             _waitingPlayers++;
+            System.out.println("Event: join");
         }
         if (_waitingPlayers >= NUM_PLAYERS)
         {
@@ -60,7 +61,6 @@ public class JoinGameEventHandler implements DataListener<String>
         User user = Server.getUser(socketIOClient);
         if (GameManager.GetUsersGame(user) == null)
         {
-            System.out.println("Event: join");
             joinGame(user);
         }
     }
