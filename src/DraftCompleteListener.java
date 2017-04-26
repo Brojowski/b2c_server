@@ -19,6 +19,6 @@ public class DraftCompleteListener implements DataListener<String>
 
         GameManager game = GameManager.GetUsersGame(u);
 
-        game.finishDraft(u, pdto);
+        // TODO: game.finishDraft(u, pdto);
     }
 }

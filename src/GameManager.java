@@ -8,108 +8,121 @@ import java.util.*;
 public class GameManager
 {
     private int _numPlayers;
-
-    private User[] _players;
     private DraftTileManager _tileManager;
+    private IServer _server;
+    private User[] _players;
+    private HashMap<User, SharedCity> leftCities = new HashMap<>();
+    private HashMap<User, SharedCity> rightCities = new HashMap<>();
+    private GameSection _currentSection;
+    private HashMap<User, GameSection> _userCompletionTracker = new HashMap<>();
+    private HashMap<User, BuildingType[]> _lastDraftSet = new HashMap<>();
+    private HashMap<User, BuildingType[]> _draftedTiles = new HashMap<>();
+
     /**
-     * cities[0] shared by _players[0] && [1]
-     * cities[1] shared by _players[1] && [2]
-     * cities[2] shared by _players[0] && [2]
+     * This is the section of the game.
+     * Modifications of a type will only be accepted during that section.
      */
-    private City[] _cities;
-    private BuildingType[][] _lastDraftSet;
-    private Map<User, BuildingType[]> _sectionComplete;
-    private boolean _draftInProgress;
-
-
-    private GameManager(User... players)
+    private enum GameSection
     {
+        Draft,
+        Place
+    }
+
+
+    private GameManager(IServer server, User... players)
+    {
+        _server = server;
         _tileManager = new DraftTileManager();
-        _players = players;
         _numPlayers = players.length;
-        _lastDraftSet = new BuildingType[_numPlayers][];
-        _cities = new City[_numPlayers];
-        for (int i = 0; i < _numPlayers; i++)
+        _players = players;
+        for (int playerNum = 0; playerNum < _numPlayers; playerNum++)
         {
-            _cities[i] = new City();
+            User player1 = players[playerNum];
+            // For the last shared city, its shared between the first player and the last player.
+            User player2 = (playerNum + 1 < _numPlayers) ? players[playerNum + 1] : players[0];
+            SharedCity sharedCity = new SharedCity(player1, player2);
+            leftCities.put(player1, sharedCity);
+            rightCities.put(player2, sharedCity);
         }
-        _sectionComplete = new HashMap<>();
-        for (User u : players)
-        {
-            _sectionComplete.put(u, null);
-        }
-        startDraft();
+        initUserCompletionTracker();
+        startDraft7();
     }
 
-    private void startDraft()
+    private void initUserCompletionTracker()
     {
-        _draftInProgress = true;
-        for (int i = 0; i < _numPlayers; i++)
+        for (User u : _players)
         {
-            _lastDraftSet[i] = _tileManager.draft7();
-            DraftTransferObject dto = DraftTransferObject.create(_lastDraftSet[i], _cities);
-            Server.emitToUser(_players[i], Routes.FromServer.BEGIN_DRAFT, dto);
+            _userCompletionTracker.put(u, null);
         }
     }
 
-    public void finishDraft(User player, PostDraftTransferObject draftResults)
+    private void startDraft7()
     {
-        // Ignore if not drafting.
-        if (!_draftInProgress)
+        _currentSection = GameSection.Draft;
+        for (User u : _players)
+        {
+            BuildingType[] tiles = _tileManager.draft7();
+            _lastDraftSet.put(u, tiles);
+            SharedCity leftCity = leftCities.get(u);
+            SharedCity rightCity = rightCities.get(u);
+            _server.startDraft(u, tiles, leftCity, rightCity);
+        }
+    }
+
+    public void draftResult(User player, BuildingType[] tiles)
+    {
+        // Verify player is in this game.
+        boolean found = false;
+        int i = -1;
+        while (!found && (i++ < _players.length)) found = _players[i] == player;
+        if (!found)
         {
             return;
         }
 
-        // Find the user index for references.
-        int playerIndex = 0;
-        while (_players[playerIndex] != player) playerIndex++;
-
-        // Check that all tiles chosen were options.
-        LinkedList<BuildingType> tiles = new LinkedList<>(Arrays.asList(_lastDraftSet[playerIndex]));
-        for (BuildingType tile : draftResults.getSelectedTiles())
+        // Verify user only chose two tiles.
+        if (tiles.length != 2)
         {
-            if (!tiles.remove(tile))
-            {
-                System.out.println("No tile found: " + tile);
-            }
+            System.out.println("To many tiles chosen");
+            return;
         }
 
-        _sectionComplete.replace(_players[playerIndex], draftResults.getSelectedTiles());
-        for (int i = 0; i < _numPlayers; i++)
+        // Verify both tiles were available to the player.
+        ArrayList<BuildingType> availableTiles = new ArrayList<>(Arrays.asList(_lastDraftSet.get(player)));
+        if (!availableTiles.remove(tiles[0]))
         {
-            if (_sectionComplete.get(_players[i]) == null)
+            System.out.println("Invalid tile chosen.");
+            return;
+        }
+        if (!availableTiles.remove(tiles[1]))
+        {
+            System.out.println("Invalid tile chosen.");
+            return;
+        }
+        _draftedTiles.put(player, tiles);
+        _userCompletionTracker.put(player, _currentSection);
+
+        // Check if should move on to placing tiles.
+        for (Map.Entry<User, GameSection> userCompletion : _userCompletionTracker.entrySet())
+        {
+            if (userCompletion.getValue() != _currentSection)
             {
                 return;
             }
         }
-
-        // All the users have chosen their tiles.
-        _draftInProgress = false;
-        System.out.println("Place tiles");
-        startPlacingTiles();
+        startPlace();
     }
 
-    private void startPlacingTiles()
+    private void startPlace()
     {
-        for (int i = 0; i < _numPlayers; i++)
-        {
-            BuildingType[] tilesToPlace = _sectionComplete.get(_players[i]);
-            PlaceTransferObject placeTransfer = PlaceTransferObject.create(tilesToPlace, null, _cities, _cities);
-            Server.emitToUser(_players[i], Routes.FromServer.BEGIN_PLACE, placeTransfer);
-        }
+        System.out.println("Start placing tiles.");
     }
-
 
 
     @Override
     public String toString()
     {
         StringBuilder out = new StringBuilder("Players:\n");
-        for (User u : _players)
-        {
-            out.append(u.getUsername());
-            out.append("\n");
-        }
         return out.toString();
     }
 
@@ -117,7 +130,7 @@ public class GameManager
 
     public static GameManager StartNewGame(User... users)
     {
-        GameManager createdGame = new GameManager(users);
+        GameManager createdGame = new GameManager(null, users);
         for (User u : users)
         {
             CURRENT_GAMES.put(u, createdGame);
