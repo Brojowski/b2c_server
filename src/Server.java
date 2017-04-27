@@ -4,9 +4,7 @@ import com.corundumstudio.socketio.SocketIOClient;
 import com.corundumstudio.socketio.SocketIOServer;
 import com.corundumstudio.socketio.listener.ConnectListener;
 import com.corundumstudio.socketio.listener.DisconnectListener;
-import com.example.b2c_core.PostDraftTransferObject;
-import com.example.b2c_core.Routes;
-import com.example.b2c_core.User;
+import com.example.b2c_core.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.HashMap;
@@ -14,7 +12,7 @@ import java.util.HashMap;
 /**
  * Created by alex on 4/12/17.
  */
-public class Server
+public class Server implements IServer
 {
     private final HashMap<SocketIOClient, User> _users = new HashMap<>();
     private final HashMap<User, SocketIOClient> _clients = new HashMap<>();
@@ -32,7 +30,7 @@ public class Server
 
         _server.addConnectListener(new ConnectionListener());
 
-        _server.addEventListener(Routes.ToServer.JOIN_GAME, String.class, new JoinGameEventHandler());
+        _server.addEventListener(Routes.ToServer.JOIN_GAME, String.class, new JoinGameEventHandler(this));
         _server.addEventListener(Routes.ToServer.DRAFT_COMPLETE, String.class, new DraftCompleteListener());
 
         _server.start();
@@ -51,15 +49,33 @@ public class Server
         INSTANCE._server.stop();
     }
 
-
     public static User getUser(SocketIOClient client)
     {
         return INSTANCE._users.get(client);
     }
 
-    public static void emitToUser(User user, String event, Object... objects)
+    @Override
+    public void startDraft(User player, BuildingType[] availableTiles, SharedCity leftCity, SharedCity rightCity, SharedCity... otherCities)
     {
-        INSTANCE._clients.get(user).sendEvent(event, objects);
+        DraftTransferObject dto = new DraftTransferObject();
+        dto.currentUser = player;
+        dto.availableTiles = availableTiles;
+        dto.leftCity = leftCity;
+        dto.rightCity = rightCity;
+        dto.otherCities = otherCities;
+        _clients.get(player).sendEvent(Routes.FromServer.BEGIN_DRAFT, dto);
+    }
+
+    @Override
+    public void startPlace(User player, HashMap<User, BuildingType[]> tileToPlace, SharedCity leftCity, SharedCity rightCity, SharedCity... otherCities)
+    {
+        PlaceTransferObject pto = new PlaceTransferObject();
+        pto.currentUser = player;
+        pto.tiles = tileToPlace;
+        pto.leftCity = leftCity;
+        pto.rightCity = rightCity;
+        pto.otherCities = otherCities;
+        _clients.get(player).sendEvent(Routes.FromServer.BEGIN_PLACE, pto);
     }
 
     private class ConnectionListener implements ConnectListener, DisconnectListener

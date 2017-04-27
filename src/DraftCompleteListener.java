@@ -14,11 +14,12 @@ public class DraftCompleteListener implements DataListener<String>
         ObjectMapper m = new ObjectMapper();
         PostDraftTransferObject pdto = m.readValue(s,PostDraftTransferObject.class);
         System.out.println(pdto);
+        System.out.println(s);
 
         User u = Server.getUser(socketIOClient);
 
         GameManager game = GameManager.GetUsersGame(u);
 
-        // TODO: game.finishDraft(u, pdto);
+        game.draftResult(u,pdto.getSelectedTiles());
     }
 }

@@ -298,9 +298,9 @@ public class GameManager
 
     private static final HashMap<User, GameManager> CURRENT_GAMES = new HashMap<>();
 
-    public static GameManager StartNewGame(User... users)
+    public static GameManager StartNewGame(IServer server, User... users)
     {
-        GameManager createdGame = new GameManager(null, users);
+        GameManager createdGame = new GameManager(server, users);
         for (User u : users)
         {
             CURRENT_GAMES.put(u, createdGame);
