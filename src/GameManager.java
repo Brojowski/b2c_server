@@ -135,7 +135,7 @@ public class GameManager
         }
     }
 
-    public boolean placeTile(User player, BuildingType tile, boolean placeOnLeftCity, int x, int y)
+    public boolean placeTile(User player, BuildingType tile, SharedCity targetCity, int x, int y)
     {
         if (!validPlayer(player))
         {
@@ -143,9 +143,13 @@ public class GameManager
         }
 
         City placementCity = null;
-        if (placeOnLeftCity)
+
+        placementCity = leftCities.get(targetCity.getRightPlayer()).getCity();
+        // The result from leftCities & rightCities should be the same object.
+        if (placementCity != rightCities.get(targetCity.getLeftPlayer()).getCity())
         {
-            placementCity = leftCities.get(player).getCity();
+            System.out.println("ERROR: Cities did not match.");
+            return false;
         }
         else
         {

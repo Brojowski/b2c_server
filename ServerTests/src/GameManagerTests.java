@@ -138,14 +138,14 @@ public class GameManagerTests
             }
         }
 
-        private void placeTile(User player, BuildingType tile, SharedCity city, boolean isLeftCity)
+        private void placeTile(User player, BuildingType tile, SharedCity city)
         {
             City c = city.getCity();
             for (int y = 0; y < 4; y++)
             {
                 for (int x = 0; x < 4; x++)
                 {
-                    if (_mngr.placeTile(player, tile, isLeftCity, x, y))
+                    if (_mngr.placeTile(player, tile, city, x, y))
                     {
                         return;
                     }
@@ -156,8 +156,8 @@ public class GameManagerTests
         @Override
         public void startPlace(User player, HashMap<User, BuildingType[]> tileToPlace, SharedCity leftCity, SharedCity rightCity, SharedCity... otherCities)
         {
-            placeTile(player, tileToPlace.get(player)[0], leftCity, true);
-            placeTile(player, tileToPlace.get(player)[1], rightCity, false);
+            placeTile(player, tileToPlace.get(player)[0], leftCity);
+            placeTile(player, tileToPlace.get(player)[1], rightCity);
             _mngr.placeComplete(player);
         }
     }

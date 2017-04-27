@@ -32,6 +32,8 @@ public class Server implements IServer
 
         _server.addEventListener(Routes.ToServer.JOIN_GAME, String.class, new JoinGameEventHandler(this));
         _server.addEventListener(Routes.ToServer.DRAFT_COMPLETE, String.class, new DraftCompleteListener());
+        _server.addEventListener(Routes.ToServer.PLAY_TILE, String.class, new PlaceTileEventHandler());
+        _server.addEventListener(Routes.ToServer.PLACE_COMPLETE, String.class, new PlaceCompleteEventHandler());
 
         _server.start();
     }
