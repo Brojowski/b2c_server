@@ -7,16 +7,18 @@ import java.util.*;
  */
 public class GameManager
 {
-    private int _numPlayers;
     private DraftTileManager _tileManager;
     private IServer _server;
     private User[] _players;
     private HashMap<User, SharedCity> leftCities = new HashMap<>();
     private HashMap<User, SharedCity> rightCities = new HashMap<>();
     private GameSection _currentSection;
+    private GameSection _lastSection;
     private HashMap<User, GameSection> _userCompletionTracker = new HashMap<>();
-    private HashMap<User, BuildingType[]> _lastDraftSet = new HashMap<>();
+    private HashMap<User, List<BuildingType>> _lastDraftSet = new HashMap<>();
     private HashMap<User, BuildingType[]> _draftedTiles = new HashMap<>();
+    private boolean draftDirectionIsLeft = true;
+    private boolean hasDoneSpecialDraft = false;
 
     /**
      * This is the section of the game.
@@ -24,7 +26,11 @@ public class GameManager
      */
     private enum GameSection
     {
-        Draft,
+        Draft7,
+        Draft5,
+        Draft3,
+        SpecialDraft7,
+        SpecialDraft5,
         Place
     }
 
@@ -33,16 +39,16 @@ public class GameManager
     {
         _server = server;
         _tileManager = new DraftTileManager();
-        _numPlayers = players.length;
+        int numPlayers = players.length;
         _players = players;
-        for (int playerNum = 0; playerNum < _numPlayers; playerNum++)
+        for (int playerNum = 0; playerNum < numPlayers; playerNum++)
         {
             User player1 = players[playerNum];
             // For the last shared city, its shared between the first player and the last player.
-            User player2 = (playerNum + 1 < _numPlayers) ? players[playerNum + 1] : players[0];
+            User player2 = (playerNum + 1 < numPlayers) ? players[playerNum + 1] : players[0];
             SharedCity sharedCity = new SharedCity(player1, player2);
-            leftCities.put(player1, sharedCity);
-            rightCities.put(player2, sharedCity);
+            leftCities.put(sharedCity.getRightPlayer(), sharedCity);
+            rightCities.put(sharedCity.getLeftPlayer(), sharedCity);
         }
         initUserCompletionTracker();
         startDraft7();
@@ -58,24 +64,30 @@ public class GameManager
 
     private void startDraft7()
     {
-        _currentSection = GameSection.Draft;
+        _currentSection = GameSection.Draft7;
         for (User u : _players)
         {
             BuildingType[] tiles = _tileManager.draft7();
-            _lastDraftSet.put(u, tiles);
+            _lastDraftSet.put(u, new ArrayList<>(Arrays.asList(tiles)));
+        }
+        baseDraft();
+    }
+
+    private void baseDraft()
+    {
+        for (User u : _players)
+        {
             SharedCity leftCity = leftCities.get(u);
             SharedCity rightCity = rightCities.get(u);
+            BuildingType[] tiles = new BuildingType[_lastDraftSet.get(u).size()];
+            tiles = _lastDraftSet.get(u).toArray(tiles);
             _server.startDraft(u, tiles, leftCity, rightCity);
         }
     }
 
     public void draftResult(User player, BuildingType[] tiles)
     {
-        // Verify player is in this game.
-        boolean found = false;
-        int i = -1;
-        while (!found && (i++ < _players.length)) found = _players[i] == player;
-        if (!found)
+        if (!validPlayer(player))
         {
             return;
         }
@@ -88,7 +100,7 @@ public class GameManager
         }
 
         // Verify both tiles were available to the player.
-        ArrayList<BuildingType> availableTiles = new ArrayList<>(Arrays.asList(_lastDraftSet.get(player)));
+        List<BuildingType> availableTiles = _lastDraftSet.get(player);
         if (!availableTiles.remove(tiles[0]))
         {
             System.out.println("Invalid tile chosen.");
@@ -102,20 +114,178 @@ public class GameManager
         _draftedTiles.put(player, tiles);
         _userCompletionTracker.put(player, _currentSection);
 
-        // Check if should move on to placing tiles.
-        for (Map.Entry<User, GameSection> userCompletion : _userCompletionTracker.entrySet())
+        // If all players have drafted, move on to placing.
+        if (gameSectionComplete())
         {
-            if (userCompletion.getValue() != _currentSection)
-            {
-                return;
-            }
+            startPlace();
         }
-        startPlace();
     }
 
     private void startPlace()
     {
         System.out.println("Start placing tiles.");
+        _lastSection = _currentSection;
+        _currentSection = GameSection.Place;
+
+        for (User player : _players)
+        {
+            SharedCity left = leftCities.get(player);
+            SharedCity right = rightCities.get(player);
+            _server.startPlace(player, _draftedTiles, left, right);
+        }
+    }
+
+    public boolean placeTile(User player, BuildingType tile, boolean placeOnLeftCity, int x, int y)
+    {
+        if (!validPlayer(player))
+        {
+            return false;
+        }
+
+        City placementCity = null;
+        if (placeOnLeftCity)
+        {
+            placementCity = leftCities.get(player).getCity();
+        }
+        else
+        {
+            placementCity = rightCities.get(player).getCity();
+        }
+        return placementCity.tryAddTile(tile, x, y);
+    }
+
+    public void placeComplete(User player)
+    {
+        if (!validPlayer(player))
+        {
+            return;
+        }
+        _userCompletionTracker.put(player, _currentSection);
+
+        if (gameSectionComplete())
+        {
+            switch (_lastSection)
+            {
+                case Draft7:
+                    startDraft5();
+                    break;
+                case Draft5:
+                    startDraft3();
+                    break;
+                case Draft3:
+                    // Start special level OR finish game.
+                    if (!hasDoneSpecialDraft)
+                    {
+                        hasDoneSpecialDraft = true;
+                        specialDraft7();
+                    }
+                    else
+                    {
+                        finishGame();
+                    }
+                    break;
+                case SpecialDraft7:
+                    specialDraft5();
+                    break;
+                case SpecialDraft5:
+                    // Switch draft direction to right.
+                    draftDirectionIsLeft = false;
+                    startDraft7();
+                    break;
+                default:
+                    System.out.println("ERROR: wrong last section.");
+            }
+        }
+    }
+
+    private void specialDraft7()
+    {
+        _currentSection = GameSection.SpecialDraft7;
+        for (User u : _players)
+        {
+            BuildingType[] tiles = _tileManager.draft7();
+            _lastDraftSet.put(u, new ArrayList<>(Arrays.asList(tiles)));
+        }
+        baseDraft();
+    }
+
+    private void specialDraft5()
+    {
+        _currentSection = GameSection.SpecialDraft5;
+        // No shifting of tiles for this one.
+        baseDraft();
+    }
+
+    private void finishGame()
+    {
+        System.out.println("Finish game!");
+        for (SharedCity c : leftCities.values())
+        {
+            System.out.println(c.getCity());
+            System.out.println();
+        }
+        FinishGame(_players);
+    }
+
+    private void startDraft5()
+    {
+        _currentSection = GameSection.Draft5;
+        transferTiles(draftDirectionIsLeft);
+        baseDraft();
+    }
+
+    private void startDraft3()
+    {
+        _currentSection = GameSection.Draft3;
+        transferTiles(draftDirectionIsLeft);
+        baseDraft();
+    }
+
+    private void transferTiles(boolean draftLeft)
+    {
+        HashMap<User, List<BuildingType>> draft5Tiles = new HashMap<>();
+        for (User player : _players)
+        {
+            User reference = userFromDraftDirection(draftLeft, player);
+            List<BuildingType> tiles = _lastDraftSet.get(reference);
+            draft5Tiles.put(reference, tiles);
+        }
+        _lastDraftSet = draft5Tiles;
+    }
+
+    private User userFromDraftDirection(boolean isLeft, User currentPlayer)
+    {
+        User tilesFrom;
+        if (isLeft)
+        {
+            tilesFrom = leftCities.get(currentPlayer).getLeftPlayer();
+        }
+        else
+        {
+            tilesFrom = rightCities.get(currentPlayer).getRightPlayer();
+        }
+        return tilesFrom;
+    }
+
+    private boolean validPlayer(User player)
+    {
+        // Verify player is in this game.
+        boolean found = false;
+        int i = -1;
+        while (!found && (i++ < _players.length)) found = _players[i] == player;
+        return found;
+    }
+
+    private boolean gameSectionComplete()
+    {
+        for (Map.Entry<User, GameSection> userCompletion : _userCompletionTracker.entrySet())
+        {
+            if (userCompletion.getValue() != _currentSection)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
 
@@ -141,5 +311,13 @@ public class GameManager
     public static GameManager GetUsersGame(User user)
     {
         return CURRENT_GAMES.get(user);
+    }
+
+    public static void FinishGame(User... users)
+    {
+        for (User u : users)
+        {
+            CURRENT_GAMES.remove(u);
+        }
     }
 }

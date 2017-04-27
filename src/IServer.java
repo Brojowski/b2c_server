@@ -2,13 +2,15 @@ import com.example.b2c_core.BuildingType;
 import com.example.b2c_core.SharedCity;
 import com.example.b2c_core.User;
 
+import java.util.HashMap;
+
 /**
  * Created by alex on 4/21/17.
  */
 public interface IServer
 {
     void startDraft(User player, BuildingType[] availableTiles, SharedCity leftCity, SharedCity rightCity, SharedCity... otherCities);
-
+    void startPlace(User player, HashMap<User, BuildingType[]> tileToPlace, SharedCity leftCity, SharedCity rightCity, SharedCity... otherCities);
 }
 
 /*

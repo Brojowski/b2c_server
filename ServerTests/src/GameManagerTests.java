@@ -1,4 +1,5 @@
 import com.example.b2c_core.BuildingType;
+import com.example.b2c_core.City;
 import com.example.b2c_core.SharedCity;
 import com.example.b2c_core.User;
 import org.junit.Assert;
@@ -8,9 +9,9 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 /**
  * Created by alex on 4/21/17.
@@ -71,6 +72,12 @@ public class GameManagerTests
 
         @Override
         public abstract void startDraft(User player, BuildingType[] availableTiles, SharedCity leftCity, SharedCity rightCity, SharedCity... otherCities);
+
+        @Override
+        public void startPlace(User player, HashMap<User, BuildingType[]> tileToPlace, SharedCity leftCity, SharedCity rightCity, SharedCity... otherCities)
+        {
+
+        }
     }
 
     private class UserVerificationServer extends DummyServer<User>
@@ -106,14 +113,19 @@ public class GameManagerTests
 
         private void returnDraft()
         {
-            for (Map.Entry<User, BuildingType[]> draftData : _draftResults.entrySet())
+            Iterator<Map.Entry<User, BuildingType[]>> draftData = _draftResults.entrySet().iterator();
+            while (draftData.hasNext())
             {
-                System.out.println(draftData.getKey());
-                System.out.println(draftData.getValue()[0]);
-                System.out.println(draftData.getValue()[1]);
-                _mngr.draftResult(draftData.getKey(), draftData.getValue());
+                Map.Entry<User, BuildingType[]> data = draftData.next();
+
+                System.out.println(data.getKey());
+                System.out.println(data.getValue()[0]);
+                System.out.println(data.getValue()[1]);
+                // This must remove things as it goes.
+                // Otherwise it gets backed up.
+                draftData.remove();
+                _mngr.draftResult(data.getKey(), data.getValue());
             }
-            _draftResults.clear();
         }
 
         @Override
@@ -124,6 +136,29 @@ public class GameManagerTests
             {
                 returnDraft();
             }
+        }
+
+        private void placeTile(User player, BuildingType tile, SharedCity city, boolean isLeftCity)
+        {
+            City c = city.getCity();
+            for (int y = 0; y < 4; y++)
+            {
+                for (int x = 0; x < 4; x++)
+                {
+                    if (_mngr.placeTile(player, tile, isLeftCity, x, y))
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void startPlace(User player, HashMap<User, BuildingType[]> tileToPlace, SharedCity leftCity, SharedCity rightCity, SharedCity... otherCities)
+        {
+            placeTile(player, tileToPlace.get(player)[0], leftCity, true);
+            placeTile(player, tileToPlace.get(player)[1], rightCity, false);
+            _mngr.placeComplete(player);
         }
     }
 }
