@@ -131,7 +131,16 @@ public class GameManager
         {
             SharedCity left = leftCities.get(player);
             SharedCity right = rightCities.get(player);
-            _server.startPlace(player, _draftedTiles, left, right);
+            SharedCity other = null;
+            for (SharedCity c : leftCities.values())
+            {
+                if (c != left && c != right)
+                {
+                    other = c;
+                    break;
+                }
+            }
+            _server.startPlace(player, _draftedTiles, left, right, other);
         }
     }
 

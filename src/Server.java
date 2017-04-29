@@ -69,14 +69,14 @@ public class Server implements IServer
     }
 
     @Override
-    public void startPlace(User player, HashMap<User, BuildingType[]> tileToPlace, SharedCity leftCity, SharedCity rightCity, SharedCity... otherCities)
+    public void startPlace(User player, HashMap<User, BuildingType[]> tileToPlace, SharedCity leftCity, SharedCity rightCity, SharedCity otherCities)
     {
         PlaceTransferObject pto = new PlaceTransferObject();
         pto.currentUser = player;
         pto.tiles = tileToPlace;
         pto.leftCity = leftCity;
         pto.rightCity = rightCity;
-        pto.otherCities = otherCities;
+        pto.otherCity = otherCities;
         _clients.get(player).sendEvent(Routes.FromServer.BEGIN_PLACE, pto);
     }
 

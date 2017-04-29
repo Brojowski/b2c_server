@@ -74,7 +74,7 @@ public class GameManagerTests
         public abstract void startDraft(User player, BuildingType[] availableTiles, SharedCity leftCity, SharedCity rightCity, SharedCity... otherCities);
 
         @Override
-        public void startPlace(User player, HashMap<User, BuildingType[]> tileToPlace, SharedCity leftCity, SharedCity rightCity, SharedCity... otherCities)
+        public void startPlace(User player, HashMap<User, BuildingType[]> tileToPlace, SharedCity leftCity, SharedCity rightCity, SharedCity otherCities)
         {
 
         }
@@ -160,7 +160,7 @@ public class GameManagerTests
         }
 
         @Override
-        public void startPlace(User player, HashMap<User, BuildingType[]> tileToPlace, SharedCity leftCity, SharedCity rightCity, SharedCity... otherCities)
+        public void startPlace(User player, HashMap<User, BuildingType[]> tileToPlace, SharedCity leftCity, SharedCity rightCity, SharedCity otherCities)
         {
             placeTile(player, tileToPlace.get(player)[0], leftCity);
             placeTile(player, tileToPlace.get(player)[1], rightCity);
