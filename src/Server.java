@@ -80,6 +80,12 @@ public class Server implements IServer
         _clients.get(player).sendEvent(Routes.FromServer.BEGIN_PLACE, pto);
     }
 
+    @Override
+    public void boardUpdate(User player, SharedCity updatedCity)
+    {
+        _clients.get(player).sendEvent(Routes.FromServer.BOARD_UPDATE, updatedCity);
+    }
+
     private class ConnectionListener implements ConnectListener, DisconnectListener
     {
 

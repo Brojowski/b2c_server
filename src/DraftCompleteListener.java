@@ -13,8 +13,6 @@ public class DraftCompleteListener implements DataListener<String>
         System.out.println(s);
         ObjectMapper m = new ObjectMapper();
         PostDraftTransferObject pdto = m.readValue(s,PostDraftTransferObject.class);
-        System.out.println(pdto);
-        System.out.println(s);
 
         User u = Server.getUser(socketIOClient);
 

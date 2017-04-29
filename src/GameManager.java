@@ -142,20 +142,26 @@ public class GameManager
             return false;
         }
 
-        City placementCity = null;
+        SharedCity placementCity = null;
 
-        placementCity = leftCities.get(targetCity.getRightPlayer()).getCity();
+        placementCity = leftCities.get(targetCity.getRightPlayer());
         // The result from leftCities & rightCities should be the same object.
-        if (placementCity != rightCities.get(targetCity.getLeftPlayer()).getCity())
+        if (placementCity != rightCities.get(targetCity.getLeftPlayer()))
         {
             System.out.println("ERROR: Cities did not match.");
             return false;
         }
-        else
+
+        boolean placeSuccess = placementCity.getCity().tryAddTile(tile, x, y);
+        if (placeSuccess)
         {
-            placementCity = rightCities.get(player).getCity();
+            System.out.println("Placed Tile.");
+            for (User p : _players)
+            {
+                _server.boardUpdate(p, placementCity);
+            }
         }
-        return placementCity.tryAddTile(tile, x, y);
+        return placeSuccess;
     }
 
     public void placeComplete(User player)

@@ -11,6 +11,7 @@ public interface IServer
 {
     void startDraft(User player, BuildingType[] availableTiles, SharedCity leftCity, SharedCity rightCity, SharedCity... otherCities);
     void startPlace(User player, HashMap<User, BuildingType[]> tileToPlace, SharedCity leftCity, SharedCity rightCity, SharedCity... otherCities);
+    void boardUpdate(User player, SharedCity updatedCity);
 }
 
 /*

@@ -93,6 +93,12 @@ public class GameManagerTests
         {
             _callback.accept(player);
         }
+
+        @Override
+        public void boardUpdate(User player, SharedCity updatedCity)
+        {
+
+        }
     }
 
     private class GameRunThroughTester implements IServer
@@ -159,6 +165,12 @@ public class GameManagerTests
             placeTile(player, tileToPlace.get(player)[0], leftCity);
             placeTile(player, tileToPlace.get(player)[1], rightCity);
             _mngr.placeComplete(player);
+        }
+
+        @Override
+        public void boardUpdate(User player, SharedCity updatedCity)
+        {
+
         }
     }
 }
